@@ -1,0 +1,29 @@
+{
+  "name": "common",
+  "version": "1.0.0",
+  "description": "",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema/product": "./src/schema/product.ts",
+    "./schema/customer": "./src/schema/customer.ts",
+    "./schema/category": "./src/schema/category.ts",
+    "./schema/brand": "./src/schema/brand.ts",
+    "./schema/stripe": "./src/schema/stripe.ts",
+    "./schema/forms/pmeds": "./src/schema/forms/pmeds.ts",
+    "./utils/address": "./src/utils/address.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vapestation/database": "*",
+    "tailwindcss": "^3.4.3",
+    "zod": "^3.23.3"
+  },
+  "devDependencies": {
+    "@vapestation/typescript-config": "*",
+    "@types/node": "^20.14.2",
+    "libphonenumber-js": "^1.11.7",
+    "typescript": "^5.4.5"
+  }
+}

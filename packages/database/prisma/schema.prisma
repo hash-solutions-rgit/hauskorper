@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductStatus {
+  PUBLISHED
+  DRAFT
+  ARCHIVED
+}
+
+type ImageMeta {
+  src         String
+  placeholder String
+}
+
+model Product {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  costPrice          Float             @default(0)
+  sellingPrice       Float             @default(0)
+  discountPrice      Float             @default(0)
+  inStock            Boolean           @default(true)
+  status             ProductStatus     @default(DRAFT)
+  slug               String            @unique
+  description        String
+  longDescription    String?
+  image              String
+  imageMeta          ImageMeta?
+  gallery            String[]
+  categoryIds        String[]          @db.ObjectId
+  publishedDate      DateTime?
+  limitPerUser       Int               @default(0)
+  blockGuest         Boolean           @default(false)
+  isDeleted          Boolean           @default(false)
+  googleAdsMeta      GoogleAdsMeta
+  brandId            String            @db.ObjectId
+  brand              Brand             @relation(fields: [brandId], references: [id])
+  inventory          Inventory
+  sku                Int               @unique
+  createdBy          String?
+  updatedBy          String?           @db.ObjectId
+  createdByUser      User?             @relation("createdBy", fields: [createdBy], references: [clerkId])
+  categories         Category[]        @relation(fields: [categoryIds], references: [id])
+  review             Review[]
+  productOrder       ProductOrder[]
+  wishlist           Wishlist[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  taxClassId         String            @db.ObjectId
+  taxClass           TaxClass          @relation(fields: [taxClassId], references: [id])
+  dimension          Dimension?
+  tabs               String?
+  tagSlug            String?
+  tag                Tag?              @relation(fields: [tagSlug], references: [slug])
+  crossSellProductId String?           @db.ObjectId
+  upSellProduct      UpSellProduct?
+  crossSellProduct   CrossSellProduct?
+  FormMetaData       FormMetaData[]
+  sales              Int               @default(0)
+}
+
+model UpSellProduct {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String   @unique @db.ObjectId
+  relatedIds String[] @db.ObjectId
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CrossSellProduct {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String   @unique @db.ObjectId
+  relatedIds String[] @db.ObjectId
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Category {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  slug             String     @unique
+  description      String
+  image            String
+  imageMeta        ImageMeta?
+  parentCategoryId String?    @db.ObjectId
+  parentCategory   Category?  @relation("CategoryToParent", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  children         Category[] @relation("CategoryToParent")
+  productIds       String[]   @db.ObjectId
+  products         Product[]  @relation(fields: [productIds], references: [id])
+}
+
+type GoogleAdsMeta {
+  brand   String
+  gtin    String
+  pipCode String?
+}
+
+enum BackOrder {
+  ALLOW
+  DENY
+  NOTIFY
+}
+
+type Inventory {
+  quantity             Int
+  allowBackOrder       BackOrder @default(DENY)
+  lowStockAlert        Int
+  limitOneItemPerOrder Boolean   @default(false)
+}
+
+type Dimension {
+  weight Float @default(0)
+  height Float @default(0)
+  length Float @default(0)
+}
+
+type AdvancedInventory {
+  enable       Boolean @default(false)
+  quantityType String
+  minQuantity  Int     @default(0)
+  maxQuantity  Int     @default(1)
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  DESPATCHED
+  COMPLETED
+  CANCELLED
+  APPROVED
+  REJECT
+}
+
+model Order {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  customerId      String         @db.ObjectId
+  cartId          String         @unique
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  products        ProductOrder[]
+  totalAmount     Float
+  status          OrderStatus
+  paymentIntentId String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  transaction     Transaction?
+  address         Address
+  orderId         String         @unique
+  FormMetaData    FormMetaData[]
+}
+
+model ProductOrder {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId String   @db.ObjectId
+  quantity  Int
+  price     Float
+  product   Product  @relation(fields: [productId], references: [id])
+  order     Order?   @relation(fields: [orderId], references: [id])
+  orderId   String?  @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId  String   @db.ObjectId
+  customerId String
+  product    Product  @relation(fields: [productId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [clerkId])
+  rating     Int
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Customer {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId     String        @unique
+  name        String
+  email       String        @unique
+  phone       String?
+  address     Address?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  review      Review[]
+  wishlist    Wishlist?     @relation(fields: [wishlistId], references: [id])
+  wishlistId  String?       @db.ObjectId
+  Order       Order[]
+  Transaction Transaction[]
+  cart        Cart?         @relation(fields: [cartId], references: [id])
+  cartId      String?       @db.ObjectId
+  isGuest     Boolean       @default(false)
+}
+
+model Wishlist {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  customerId String     @unique @db.ObjectId
+  productId  String     @db.ObjectId
+  product    Product    @relation(fields: [productId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  customer   Customer[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId        String    @unique
+  name           String
+  email          String    @unique
+  role           Role      @default(USER)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  productCreated Product[] @relation("createdBy")
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PROCESSING
+}
+
+model Transaction {
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  customerId String
+  customer   Customer          @relation(fields: [customerId], references: [clerkId])
+  amount     Float
+  orderId    String            @unique @db.ObjectId
+  order      Order             @relation(fields: [orderId], references: [id])
+  address    Address
+  status     TransactionStatus
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+enum BannerType {
+  Banner
+  Brand
+  Ahmu
+}
+
+model Banner {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  image       String
+  imageMeta   ImageMeta?
+  link        String
+  color       String     @default("#3b82f6")
+  logoImage   String?
+  type        BannerType @default(Banner)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model MetaData {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  keywords    String[]
+  description String
+  ogImage     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Counter {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  count     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Brand {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String     @unique
+  slug        String     @unique
+  image       String
+  imageMeta   ImageMeta?
+  description String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  product     Product[]
+}
+
+type CustomerGuest {
+  name  String
+  phone String
+}
+
+model Cart {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  customerId  String
+  totalAmount Float
+  products    CartProduct[]
+  guestMeta   CustomerGuest?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  Customer    Customer[]
+}
+
+type FormMetaDataProduct {
+  productId String @db.ObjectId
+  value     Json?
+  tagSlug   String
+}
+
+type CartProduct {
+  id           String               @db.ObjectId
+  quantity     Int
+  price        Float
+  formMetaData FormMetaDataProduct?
+}
+
+model USPBanner {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  message   String
+  image     String
+  imageMeta ImageMeta?
+}
+
+type Address {
+  city      String
+  country   String
+  line1     String
+  line2     String?
+  post_code String
+  state     String?
+  district  String?
+}
+
+model TaxClass {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  rate      Float
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Product   Product[]
+}
+
+model Tag {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  slug         String         @unique
+  Product      Product[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  FormMetaData FormMetaData[]
+}
+
+model FormMetaData {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  tagSlug   String
+  tag       Tag      @relation(fields: [tagSlug], references: [slug])
+  orderId   String   @db.ObjectId
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  value     Json?
+  order     Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
